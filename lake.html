@@ -1,14 +1,9 @@
 <html>
 	<head>
-    <script>
-      function changeColors(azimuth, altitude) {
-        // As of right now only altitude matters
-      }
-    </script>
     <style>
         :root {
           --background-mountain: #6676a9;
-          --midground-mountain: #5b6899;
+          --midground-mountain: color-mix(in srgb, var(--background-mountain), var(--foreground-mountain));
           --foreground-mountain: #414875;
           --background-island: #353a65;
           --foreground-island: #20293c;
@@ -31,6 +26,62 @@
           position: absolute;
         }
     </style>
+    <script>
+      const HORIZONTAL_FOV = Math.PI / 3 // Horizontal field of view in radians
+      function changeColors(azimuth, altitude) {
+        propertyList = [
+          '--background-mountain', 
+          '--foreground-mountain', 
+          '--background-island',
+          '--foreground-island',
+          '--reflection-up',
+          '--reflection-down',
+          '--sky-up',
+          '--sky-down',
+          '--clouds',
+          '--sun-glow',
+          '--sun-color']
+        // As of right now only altitude matters
+        const daytimeColors = {
+          '--background-mountain': "#6676a9", 
+          '--foreground-mountain': "#414875",
+          '--background-island': "#353a65",
+          '--foreground-island': "#20293c",
+          '--reflection-up': "#8d9fc2",
+          '--reflection-down': "#5a75b2",
+          '--sky-up': "#4c7cd2",
+          '--sky-down': "#adc9f1",
+          '--clouds': "#e6f8ff",
+          '--sun-glow': "#ffffff",
+          '--sun-color': "#ffffff"
+        };
+        const sunsetColors = {
+          '--background-mountain': "#8e4244", 
+          '--foreground-mountain': "#582e46",
+          '--background-island': "#3f2a49",
+          '--foreground-island': "#26203c",
+          '--reflection-up': "#bb6a5d",
+          '--reflection-down': "#5c486d",
+          '--sky-up': "#313359",
+          '--sky-down': "#e16c37",
+          '--clouds': "#e58b3d",
+          '--sun-glow': "#ffb468",
+          '--sun-color': "#ffffff"
+        };
+        style = document.styleSheets[0].cssRules[0].style;
+        percent = 0;
+        if (altitude <= 30 && altitude > 15) {
+          percent = 100 - ((altitude - 15) / 15) * 100;
+        }
+        if (altitude <= 15) {
+          percent = 100;
+        }
+        for (property of propertyList) {
+          console.log("color-mix(in srgb, " + daytimeColors[property] + ", " + sunsetColors[property] + " " + Math.floor(percent) + "%)")
+          style.setProperty(property, ("color-mix(in srgb, " + daytimeColors[property] + ", " + sunsetColors[property] + " " + Math.floor(percent) + "%)"))
+        }
+      }
+    </script>
 	</head>
 	<body>
     <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="sky">
@@ -76,9 +127,9 @@
       style="display:inline;fill:url(#linearGradient22815);fill-opacity:1;stroke:none;"
       id="rect22807"
       width="3840"
-      height="739.42249"
-      x="0.875"
-      y="1418.3275" />
+      height="740"
+      x="0"
+      y="1420" />
     </svg>
     <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="reflection">
     <g id="layer7" style="display:inline;opacity:0.4">
