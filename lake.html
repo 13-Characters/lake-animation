@@ -74,16 +74,41 @@
           '--sun-glow': "#ffb468",
           '--sun-color': "#ffffff"
         };
+        const sunsetStart = { // beginning of the transition from daytime colors to sunset colors, by elevation
+          '--background-mountain': Math.PI * 0.25, 
+          '--foreground-mountain': Math.PI * 0.25,
+          '--background-island': Math.PI * 0.25,
+          '--foreground-island': Math.PI * 0.25,
+          '--reflection-up': Math.PI * 0.4,
+          '--reflection-down': Math.PI * 0.16,
+          '--sky-up': Math.PI * 0.16,
+          '--sky-down': Math.PI * 0.4,
+          '--clouds': Math.PI * 0.3,
+          '--sun-glow': Math.PI * 0.16,
+          '--sun-color': Math.PI * 0.16
+        }
+        const sunsetEnd = { // beginning of the transition from daytime colors to sunset colors, by elevation
+          '--background-mountain': Math.PI * 0.08, 
+          '--foreground-mountain': Math.PI * 0.08,
+          '--background-island': Math.PI * 0.08,
+          '--foreground-island': Math.PI * 0.08,
+          '--reflection-up': Math.PI * 0.08,
+          '--reflection-down': Math.PI * 0.08,
+          '--sky-up': Math.PI * 0.08,
+          '--sky-down': Math.PI * 0.08,
+          '--clouds': Math.PI * 0.08,
+          '--sun-glow': Math.PI * 0.08,
+          '--sun-color': Math.PI * 0.08
+        }
         style = document.styleSheets[0].cssRules[0].style;
-        percent = 0;
-        if (altitude <= Math.PI/6 && altitude > Math.PI/12) {
-          percent = 100 - ((altitude - (Math.PI/12)) / (Math.PI/12)) * 100;
-        }
-        if (altitude <= Math.PI/12) {
-          percent = 100;
-        }
         for (property of propertyList) {
-          style.setProperty(property, ("color-mix(in srgb, " + daytimeColors[property] + ", " + sunsetColors[property] + " " + Math.floor(percent) + "%)"))
+          if (altitude > 0) {
+            percent = 100 * ((altitude - sunsetEnd[property]) / (sunsetStart[property] - sunsetEnd[property]));
+            percent = Math.min(100, percent);
+            percent = Math.max(0, percent);
+            console.log(percent)
+            style.setProperty(property, ("color-mix(in lab, " + daytimeColors[property] + ", " + sunsetColors[property] + " " + Math.floor(100 - percent) + "%)"))
+          }
         }
       }
       function changeSunPosition(azimuth, altitude) {
