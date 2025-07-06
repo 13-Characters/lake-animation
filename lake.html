@@ -35,6 +35,39 @@
       const HORIZON_Y = 1420; // The y-coordinate of the horizon in the image
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
+      const LATITUDE = 33.645901 * (Math.PI / 180);
+      const LONGITUDE = -117.842689 * (Math.PI / 180); // does this even matter
+
+      // ra is right ascension, dec is declination and rotation is a number
+      // where rotation=0 represents the position where the zenith is at ra=0
+      function equatorialToAzimuthAltitude(ra, dec, rotation) {
+        // Assume radius is 1, represent this coordinate in rectangular coordinates
+        // since we are doing rotation matrix calculation
+        // Let the x-axis represent ra=pi/2, dec=0
+        // y-axis is ra=0, dec=0
+        // z-axis is the point where dec=pi/2, which is the north pole
+        theta = (Math.PI/2 - ra) % (2 * Math.PI)
+        xOld = Math.cos(theta) * Math.cos(dec);
+        yOld = Math.sin(theta) * Math.cos(dec);
+        zOld = Math.sin(dec);
+        // Apply first transformation, rotate point about z-axis by rotation
+        xNew = Math.cos(-rotation)*xOld + Math.sin(-rotation)*yOld;
+        yNew = -Math.sin(-rotation)*xOld + Math.cos(-rotation)*yOld;
+        zNew = zOld;
+        xOld = xNew;
+        yOld = yNew;
+        zOld = zNew;
+        // Apply second transformation, rotate point about x-axis
+        a = LATITUDE - Math.PI;
+        xNew = xNew;
+        yNew = Math.cos(a)*yOld + Math.sin(a)*zOld;
+        zNew = -Math.sin(a)*yOld + Math.cos(a)*zOld;
+        // Convert back into azimuth/alt coordinates
+        azimuth = (5*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
+        altitude = Math.asin(zNew);
+        return [azimuth, altitude];
+      }
+
       function azimuthBlendFunction(azimuth) { // returns a value from 0 to 100 depending on azimuth. used to blend between the sunrise/sunset gradients
         threshold = Math.PI/9
         x = Math.abs((azimuth - Math.PI/2) % (Math.PI * 2))
@@ -61,9 +94,9 @@
         }
       }
       function changeColors(azimuth, altitude) {
-        TWILIGHT_1_THRESHOLD = 1.25 * (-Math.PI / 27);
-        TWILIGHT_2_THRESHOLD = 1.75 * (-Math.PI / 27);
-        TWILIGHT_3_THRESHOLD = 3 * -Math.PI / 27;
+        TWILIGHT_1_THRESHOLD = 1.25 * (-Math.PI / 27); // end of sunset-twilight color transition
+        TWILIGHT_2_THRESHOLD = 1.75 * (-Math.PI / 27); // beginning of twilight-night color transition
+        TWILIGHT_3_THRESHOLD = 3 * -Math.PI / 27; // end of twilight-night color transition
         propertyList = [
           '--background-mountain', 
           '--foreground-mountain', 
@@ -76,7 +109,6 @@
           '--clouds',
           '--sun-glow',
           '--sun-color']
-        // As of right now only altitude matters
         const daytimeColors = {
           '--background-mountain': "#6676a9", 
           '--foreground-mountain': "#414875",
