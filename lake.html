@@ -36,7 +36,20 @@
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
       const LATITUDE = 33.645901 * (Math.PI / 180);
-      const LONGITUDE = -117.842689 * (Math.PI / 180); // does this even matter
+      const SUN_RA = 0;
+      const SUN_DEC = 0;
+      const ANIMATION_PERIOD = 20000;
+
+      function animate(time) {
+        rotation = ((time / ANIMATION_PERIOD) * 2 * Math.PI) % (2 * Math.PI);
+        coords = equatorialToAzimuthAltitude(SUN_RA, SUN_DEC, rotation);
+        azimuth = coords[0];
+        altitude = coords[1];
+        console.log(time);
+        changeSunPosition(azimuth, altitude);
+        requestAnimationFrame((t) => animate(t));
+      }
+      requestAnimationFrame(animate);
 
       // ra is right ascension, dec is declination and rotation is a number
       // where rotation=0 represents the position where the zenith is at ra=0
