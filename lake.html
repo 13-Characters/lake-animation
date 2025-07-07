@@ -381,7 +381,7 @@
       }
       function placeStar(azimuth, altitude, size) {
         stars = document.getElementById("stars");
-        if (Math.abs(azimuth - CAMERA_AZIMUTH) <= (HORIZONTAL_FOV / 2) && altitude > 0) {
+        if (Math.abs(((azimuth - CAMERA_AZIMUTH) + Math.PI) % (Math.PI*2) - Math.PI) <= (HORIZONTAL_FOV / 2) && altitude > 0) {
           star = document.getElementById("star")
           ctx = stars.getContext("2d");
           xyCoords = aziAltToXY(azimuth, altitude);
