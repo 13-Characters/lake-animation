@@ -95,8 +95,8 @@
         yOld = Math.sin(theta) * Math.cos(dec);
         zOld = Math.sin(dec);
         // Apply first transformation, rotate point about z-axis by rotation
-        xNew = Math.cos(-rotation)*xOld + Math.sin(-rotation)*yOld;
-        yNew = -Math.sin(-rotation)*xOld + Math.cos(-rotation)*yOld;
+        xNew = Math.cos(rotation)*xOld + Math.sin(rotation)*yOld;
+        yNew = -Math.sin(rotation)*xOld + Math.cos(rotation)*yOld;
         zNew = zOld;
         xOld = xNew;
         yOld = yNew;
