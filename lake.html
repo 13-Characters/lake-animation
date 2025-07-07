@@ -71,9 +71,11 @@
               coords = equatorialToAzimuthAltitude(star["RA"], star["DEC"], rotation);
               azimuth = coords[0];
               altitude = coords[1];
-              size = (100 - (15 * star["MAG"])) * starFadeOutFunction(sunAltitude);
+              size = (100 - (15 * star["MAG"])) - (110 * (1 - starFadeOutFunction(sunAltitude)));
               // if (star == STAR_DATA[0]) {console.log(coords)}
-              placeStar(azimuth, altitude, size);
+              if (size > 0) {
+                placeStar(azimuth, altitude, size);
+              }
             }
           }
         }
