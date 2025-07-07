@@ -48,7 +48,7 @@
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
       const LATITUDE = 33.645901 * (Math.PI / 180);
-      // const LATITUDE = 77.8 * (Math.PI / 180);
+      // const LATITUDE = 0;
       const SUN_RA = 4.9968;
       const SUN_DEC = -0.39364;
       const ANIMATION_PERIOD = 60000;
@@ -88,12 +88,13 @@
         // Assume radius is 1, represent this coordinate in rectangular coordinates
         // since we are doing rotation matrix calculation
         // Let the x-axis represent ra=pi/2, dec=0
-        // y-axis is ra=0, dec=0
+        // y-axis is ra=pi, dec=0
         // z-axis is the point where dec=pi/2, which is the north pole
-        theta = (Math.PI/2 - ra) % (2 * Math.PI)
+        theta = (ra - Math.PI/2) % (2 * Math.PI)
         xOld = Math.cos(theta) * Math.cos(dec);
         yOld = Math.sin(theta) * Math.cos(dec);
         zOld = Math.sin(dec);
+        // console.log([xOld, yOld, zOld]);
         // Apply first transformation, rotate point about z-axis by rotation
         xNew = Math.cos(rotation)*xOld + Math.sin(rotation)*yOld;
         yNew = -Math.sin(rotation)*xOld + Math.cos(rotation)*yOld;
@@ -101,13 +102,15 @@
         xOld = xNew;
         yOld = yNew;
         zOld = zNew;
+        // console.log([xOld, yOld, zOld]);
         // Apply second transformation, rotate point about x-axis
-        a = LATITUDE - Math.PI/2;
+        a = Math.PI/2 - LATITUDE;
         xNew = xNew;
         yNew = Math.cos(a)*yOld + Math.sin(a)*zOld;
         zNew = -Math.sin(a)*yOld + Math.cos(a)*zOld;
+        // console.log([xNew, yNew, zNew]);
         // Convert back into azimuth/alt coordinates
-        azimuth = (3*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
+        azimuth = (5*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
         altitude = Math.asin(zNew);
         return [azimuth, altitude];
       }
