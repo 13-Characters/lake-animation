@@ -30,11 +30,14 @@
         }
         canvas {
           aspect-ratio: 16 / 9;
-          width: fit-content;
+          width: min(100%, 177.778vh);
           height: auto;
           position: absolute;
           margin: 0;
           overflow: hidden;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
         }
     </style>
     <script id="star-data" type="text/javascript" src="star_data.js"></script>
@@ -46,8 +49,8 @@
       const IMAGE_HEIGHT = 2560;
       const LATITUDE = 33.645901 * (Math.PI / 180);
       // const LATITUDE = 77.8 * (Math.PI / 180);
-      const SUN_RA = 0;
-      const SUN_DEC = 13.5 * (Math.PI/180);
+      const SUN_RA = 4.9968;
+      const SUN_DEC = -0.39364;
       const ANIMATION_PERIOD = 60000;
       const STAR_DATA = JSON.parse(starData)
       console.log(STAR_DATA[0])
@@ -55,10 +58,25 @@
       function animate(time) {
         rotation = ((time / ANIMATION_PERIOD) * 2 * Math.PI) % (2 * Math.PI);
         coords = equatorialToAzimuthAltitude(SUN_RA, SUN_DEC, rotation);
-        azimuth = coords[0];
-        altitude = coords[1];
-        changeSunPosition(azimuth, altitude);
+        sunAzimuth = coords[0];
+        sunAltitude = coords[1];
+        changeSunPosition(sunAzimuth, sunAltitude);
         changeCloudPosition((time*1.5 / ANIMATION_PERIOD) % 1)
+
+        ctx = document.getElementById("stars").getContext("2d");
+        ctx.clearRect(0, 0, 3840, 2560);
+        if (sunAltitude < 0) {
+          for (star of STAR_DATA) {
+            if (star["MAG"] < 5.5) {
+              coords = equatorialToAzimuthAltitude(star["RA"], star["DEC"], rotation);
+              azimuth = coords[0];
+              altitude = coords[1];
+              size = (100 - (15 * star["MAG"])) * starFadeOutFunction(sunAltitude);
+              // if (star == STAR_DATA[0]) {console.log(coords)}
+              placeStar(azimuth, altitude, size);
+            }
+          }
+        }
         requestAnimationFrame((t) => animate(t));
       }
       requestAnimationFrame(animate);
@@ -107,6 +125,19 @@
         }
         else {
           return 100 * ((2*Math.PI - x - threshold) / (Math.PI - 2*threshold));
+        }
+      }
+
+      function starFadeOutFunction(altitude) {
+        threshold = -Math.PI * 0.12
+        if (altitude < threshold) {
+          return 1;
+        }
+        if (altitude > 0) {
+          return 0;
+        }
+        if (altitude < 0) {
+          return -((altitude/threshold - 1)**2) + 1
         }
       }
       function duckOpacity(altitude) {
@@ -320,11 +351,17 @@
           }
         }
       }
+      function aziAltToXY(azimuth, altitude) {
+        x = (Math.tan(azimuth - CAMERA_AZIMUTH) / Math.tan(HORIZONTAL_FOV / 2) + 1) * (IMAGE_WIDTH / 2);
+        y = HORIZON_Y - (Math.tan(altitude) / Math.cos(azimuth - CAMERA_AZIMUTH) / Math.tan(HORIZONTAL_FOV / 2)) * (IMAGE_WIDTH / 2);
+        return [x, y]
+      }
       function changeSunPosition(azimuth, altitude) {
         sun = document.getElementById("sun");
         if (altitude > 0) {
-          sun_x = (Math.tan(azimuth - CAMERA_AZIMUTH) / Math.tan(HORIZONTAL_FOV / 2) + 1) * (IMAGE_WIDTH / 2);
-          sun_y = HORIZON_Y - (Math.tan(altitude) / Math.cos(azimuth - CAMERA_AZIMUTH) / Math.tan(HORIZONTAL_FOV / 2)) * (IMAGE_WIDTH / 2);
+          xyCoords = aziAltToXY(azimuth, altitude);
+          sun_x = xyCoords[0];
+          sun_y = xyCoords[1];
           sun.setAttribute('x', sun_x);
           sun.setAttribute('y', sun_y);
           sun.setAttribute("opacity", 1);
@@ -337,14 +374,32 @@
       function changeCloudPosition(t) {
         clouds.setAttribute('x', -(0.5+t)*7203.4177);
       }
-      function placeStar(azimuth, altitude) {
+      function testCanvas() {
         stars = document.getElementById("stars");
-
+        ctx = stars.getContext("2d");
+        ctx.fillRect(0, 0, 3840, 2560);
+      }
+      function placeStar(azimuth, altitude, size) {
+        stars = document.getElementById("stars");
+        if (Math.abs(azimuth - CAMERA_AZIMUTH) <= (HORIZONTAL_FOV / 2) && altitude > 0) {
+          star = document.getElementById("star")
+          ctx = stars.getContext("2d");
+          xyCoords = aziAltToXY(azimuth, altitude);
+          x = xyCoords[0];
+          y = xyCoords[1];
+          x -= size/2;
+          y -= size/2;
+          if (x > -size/2 && x < IMAGE_WIDTH + size/2
+            && y > -size/2 && y < IMAGE_HEIGHT + size/2
+          )
+          ctx.drawImage(star, x, y, size, size)
+        }
       }
     </script>
 	</head>
 	<body>
-    <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="sky">
+    <img src="./star.svg" id="star" style="display: none">
+    <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="sky-background">
       <defs id="defs136">
         <linearGradient id="linearGradient22813">
           <stop style="stop-color:var(--reflection-up);stop-opacity:1;" offset="0" id="stop22809"></stop>
@@ -360,6 +415,9 @@
       <g style="display:inline;fill:none;fill-opacity:1">
         <rect id="sky-bg" style="display:inline;fill:url(#linearGradient10126);fill-opacity:1;stroke:none;stroke-width:1.51181;stroke-linecap:round;stroke-linejoin:round" id="rect7683" width="3840" height="1105.4686" x="0" y="0"></rect>
       </g>
+    </svg>
+    <canvas id="stars" width="3840" height="2160"></canvas>
+    <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="sky-foreground">
       <svg
         width="15360"
         height="176.42599"
@@ -620,7 +678,6 @@
         id="path22148" />
     </g>
     </svg>
-    <canvas id="stars" width="3840" height="2160"></canvas>
     <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="water">
       <rect
       style="display:inline;fill:url(#linearGradient22815);fill-opacity:1;stroke:none;"
