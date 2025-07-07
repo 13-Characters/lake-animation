@@ -28,7 +28,16 @@
         svg {
           position: absolute;
         }
+        canvas {
+          aspect-ratio: 16 / 9;
+          width: fit-content;
+          height: auto;
+          position: absolute;
+          margin: 0;
+          overflow: hidden;
+        }
     </style>
+    <script id="star-data" type="text/javascript" src="star_data.js"></script>
     <script>
       const HORIZONTAL_FOV = Math.PI / 3; // Horizontal field of view in radians
       const CAMERA_AZIMUTH = Math.PI * 3 / 2; // The direction that the camera is facing, 0 north
@@ -40,6 +49,8 @@
       const SUN_RA = 0;
       const SUN_DEC = 13.5 * (Math.PI/180);
       const ANIMATION_PERIOD = 60000;
+      const STAR_DATA = JSON.parse(starData)
+      console.log(STAR_DATA[0])
 
       function animate(time) {
         rotation = ((time / ANIMATION_PERIOD) * 2 * Math.PI) % (2 * Math.PI);
@@ -326,6 +337,10 @@
       function changeCloudPosition(t) {
         clouds.setAttribute('x', -(0.5+t)*7203.4177);
       }
+      function placeStar(azimuth, altitude) {
+        stars = document.getElementById("stars");
+
+      }
     </script>
 	</head>
 	<body>
@@ -605,6 +620,7 @@
         id="path22148" />
     </g>
     </svg>
+    <canvas id="stars" width="3840" height="2160"></canvas>
     <svg viewBox="0 0 3840 2160" width="100%" height="100%" x="0" y="0" id="water">
       <rect
       style="display:inline;fill:url(#linearGradient22815);fill-opacity:1;stroke:none;"
