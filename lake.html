@@ -49,19 +49,22 @@
       const IMAGE_HEIGHT = 2560;
       const LATITUDE = 33.645901 * (Math.PI / 180);
       // const LATITUDE = 0;
-      const SUN_RA = 4.9968;
-      const SUN_DEC = -0.39364;
-      const ANIMATION_PERIOD = 60000;
+      // const SUN_RA = 1.87456;
+      // const SUN_DEC = 0.392146;
+      const SUN_RA = 5.03222;
+      const SUN_DEC = -0.39040;
+      const EARTH_ROTATION_PERIOD = 86164.098904;
+      const ROTATION_OFFSET = 0;
       const STAR_DATA = JSON.parse(starData)
       console.log(STAR_DATA[0])
 
-      function animate(time) {
-        rotation = ((time / ANIMATION_PERIOD) * 2 * Math.PI) % (2 * Math.PI);
+      function renderFrame(time) {
+        rotation = 2*Math.PI * ((time / EARTH_ROTATION_PERIOD + ROTATION_OFFSET) % 1);
         coords = equatorialToAzimuthAltitude(SUN_RA, SUN_DEC, rotation);
         sunAzimuth = coords[0];
         sunAltitude = coords[1];
         changeSunPosition(sunAzimuth, sunAltitude);
-        changeCloudPosition((time*1.5 / ANIMATION_PERIOD) % 1)
+        changeCloudPosition((time*1.5 / EARTH_ROTATION_PERIOD) % 1)
 
         clearStars();
         if (sunAltitude < 0) {
@@ -78,10 +81,19 @@
             }
           }
         }
+      }
+      function animate(time) {
+        renderFrame(time * (EARTH_ROTATION_PERIOD/60000));
         requestAnimationFrame((t) => animate(t));
       }
       requestAnimationFrame(animate);
-
+      // This function is meant to account for the difference in altitude caused by atmospheric refraction.
+      // This function remains unused because the difference appears negligible in the animation.
+      function refraction(altitude) {
+        H = altitude * (180 / Math.PI);
+        result = 0.01667 / Math.tan((H + 8.6 / (H + 4.4)) * Math.PI/180);
+        return result * (Math.PI/180);
+      }
       // ra is right ascension, dec is declination and rotation is a number
       // where rotation=0 represents the position where the zenith is at ra=0
       function equatorialToAzimuthAltitude(ra, dec, rotation) {
@@ -94,7 +106,6 @@
         xOld = Math.cos(theta) * Math.cos(dec);
         yOld = Math.sin(theta) * Math.cos(dec);
         zOld = Math.sin(dec);
-        // console.log([xOld, yOld, zOld]);
         // Apply first transformation, rotate point about z-axis by rotation
         xNew = Math.cos(rotation)*xOld + Math.sin(rotation)*yOld;
         yNew = -Math.sin(rotation)*xOld + Math.cos(rotation)*yOld;
@@ -102,13 +113,11 @@
         xOld = xNew;
         yOld = yNew;
         zOld = zNew;
-        // console.log([xOld, yOld, zOld]);
         // Apply second transformation, rotate point about x-axis
         a = Math.PI/2 - LATITUDE;
         xNew = xNew;
         yNew = Math.cos(a)*yOld + Math.sin(a)*zOld;
         zNew = -Math.sin(a)*yOld + Math.cos(a)*zOld;
-        // console.log([xNew, yNew, zNew]);
         // Convert back into azimuth/alt coordinates
         azimuth = (5*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
         altitude = Math.asin(zNew);
