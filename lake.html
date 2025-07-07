@@ -43,7 +43,7 @@
     <script id="star-data" type="text/javascript" src="star_data.js"></script>
     <script>
       const HORIZONTAL_FOV = Math.PI / 3; // Horizontal field of view in radians
-      const CAMERA_AZIMUTH = Math.PI * 3 / 2; // The direction that the camera is facing, 0 north
+      const CAMERA_AZIMUTH = Math.PI * 1.45; // The direction that the camera is facing, 0 north
       const HORIZON_Y = 1420; // The y-coordinate of the horizon in the image
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
@@ -63,8 +63,7 @@
         changeSunPosition(sunAzimuth, sunAltitude);
         changeCloudPosition((time*1.5 / ANIMATION_PERIOD) % 1)
 
-        ctx = document.getElementById("stars").getContext("2d");
-        ctx.clearRect(0, 0, 3840, 2560);
+        clearStars();
         if (sunAltitude < 0) {
           for (star of STAR_DATA) {
             if (star["MAG"] < 5.5) {
@@ -108,7 +107,7 @@
         yNew = Math.cos(a)*yOld + Math.sin(a)*zOld;
         zNew = -Math.sin(a)*yOld + Math.cos(a)*zOld;
         // Convert back into azimuth/alt coordinates
-        azimuth = (5*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
+        azimuth = (3*Math.PI/2 - Math.atan2(yNew, xNew)) % (2*Math.PI);
         altitude = Math.asin(zNew);
         return [azimuth, altitude];
       }
@@ -129,7 +128,7 @@
           return 100 * ((2*Math.PI - x - threshold) / (Math.PI - 2*threshold));
         }
       }
-
+      
       function starFadeOutFunction(altitude) {
         threshold = -Math.PI * 0.12
         if (altitude < threshold) {
@@ -380,6 +379,10 @@
         stars = document.getElementById("stars");
         ctx = stars.getContext("2d");
         ctx.fillRect(0, 0, 3840, 2560);
+      }
+      function clearStars() {
+        ctx = document.getElementById("stars").getContext("2d");
+        ctx.clearRect(0, 0, 3840, 2560);
       }
       function placeStar(azimuth, altitude, size) {
         stars = document.getElementById("stars");
