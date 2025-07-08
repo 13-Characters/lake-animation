@@ -47,8 +47,9 @@
       const HORIZON_Y = 1420; // The y-coordinate of the horizon in the image
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
-      const LATITUDE = 33.645901 * (Math.PI / 180);
-      // const LATITUDE = 0;
+      url = new URL(window.location.href);
+      const LATITUDE = url.searchParams.get("LATITUDE") * (Math.PI / 180);
+      const LONGITUDE = url.searchParams.get("LONGITUDE") * (Math.PI / 180);
       // const SUN_RA = 1.87456;
       // const SUN_DEC = 0.392146;
       const SUN_RA = 5.03222;
