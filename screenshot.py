@@ -5,8 +5,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 import sys
 
-LATITUDE = sys.argv[0]
-LONGITUDE = sys.argv[1]
+LATITUDE = float(sys.argv[0])
+LONGITUDE = float(sys.argv[1])
 now = math.floor(datetime.now().timestamp())
 p = Path(__file__).parent
 url = (p / "lake.html").as_uri()
