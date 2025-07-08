@@ -50,19 +50,14 @@
       url = new URL(window.location.href);
       const LATITUDE = url.searchParams.get("LATITUDE") * (Math.PI / 180);
       const LONGITUDE = url.searchParams.get("LONGITUDE") * (Math.PI / 180);
-      const STARTING_TIME = url.searchParams.get("STARTING_TIME");
-      const ANIMATION = url.searchParams.get("ANIMATION");
-      // const SUN_RA = 1.87456;
-      // const SUN_DEC = 0.392146;
-      const SUN_RA = 5.03222;
-      const SUN_DEC = -0.39040;
+      const STARTING_TIME = parseInt(url.searchParams.get("STARTING_TIME"));
+      const ANIMATION = url.searchParams.has("ANIMATION");
       const EARTH_ROTATION_PERIOD = 86164.098904;
       const ROTATION_OFFSET = 0;
       const STAR_DATA = JSON.parse(starData)
-      console.log(STAR_DATA[0])
 
       function renderFrame(time) {
-        rotation = 2*Math.PI * (0.7790572732640+1.00273781191135448*((time-946728000)/86400))
+        rotation = (2*Math.PI * (0.7790572732640+1.00273781191135448*((time-946728000)/86400))) % (2 * Math.PI)
         rotation += LONGITUDE;
         // rotation = 2*Math.PI * ((time / EARTH_ROTATION_PERIOD + ROTATION_OFFSET) % 1);
         sunEqCoords = getSunCoords(time);
@@ -430,7 +425,7 @@
         }
       }
 
-      if (ANIMATION == true) {
+      if (ANIMATION) {
         requestAnimationFrame(animate);
       }
       else {
