@@ -48,9 +48,24 @@
       const IMAGE_WIDTH = 3840;
       const IMAGE_HEIGHT = 2560;
       url = new URL(window.location.href);
-      const LATITUDE = url.searchParams.get("LATITUDE") * (Math.PI / 180);
-      const LONGITUDE = url.searchParams.get("LONGITUDE") * (Math.PI / 180);
-      const STARTING_TIME = parseInt(url.searchParams.get("STARTING_TIME"));
+      if (url.searchParams.has("LATITUDE")) {
+        LATITUDE = url.searchParams.get("LATITUDE") * (Math.PI / 180);
+      }
+      else {
+        LATITUDE = 0;
+      }
+      if (url.searchParams.has("LONGITUDE")) {
+        LONGITUDE = url.searchParams.get("LONGITUDE") * (Math.PI / 180);
+      }
+      else {
+        LONGITUDE = 0;
+      }
+      if (url.searchParams.has("STARTING_TIME")) {
+        STARTING_TIME = parseInt(url.searchParams.get("STARTING_TIME"));
+      }
+      else {
+        STARTING_TIME = 0;
+      }
       const ANIMATION = url.searchParams.has("ANIMATION");
       const EARTH_ROTATION_PERIOD = 86164.098904;
       const ROTATION_OFFSET = 0;
