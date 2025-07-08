@@ -50,6 +50,8 @@
       url = new URL(window.location.href);
       const LATITUDE = url.searchParams.get("LATITUDE") * (Math.PI / 180);
       const LONGITUDE = url.searchParams.get("LONGITUDE") * (Math.PI / 180);
+      const STARTING_TIME = url.searchParams.get("STARTING_TIME");
+      const ANIMATION = url.searchParams.get("ANIMATION");
       // const SUN_RA = 1.87456;
       // const SUN_DEC = 0.392146;
       const SUN_RA = 5.03222;
@@ -60,13 +62,15 @@
       console.log(STAR_DATA[0])
 
       function renderFrame(time) {
-        rotation = 2*Math.PI * ((time / EARTH_ROTATION_PERIOD + ROTATION_OFFSET) % 1);
-        coords = equatorialToAzimuthAltitude(SUN_RA, SUN_DEC, rotation);
-        sunAzimuth = coords[0];
-        sunAltitude = coords[1];
+        rotation = 2*Math.PI * (0.7790572732640+1.00273781191135448*((time-946728000)/86400))
+        rotation += LONGITUDE;
+        // rotation = 2*Math.PI * ((time / EARTH_ROTATION_PERIOD + ROTATION_OFFSET) % 1);
+        sunEqCoords = getSunCoords(time);
+        sunAzAlt = equatorialToAzimuthAltitude(sunEqCoords[0], sunEqCoords[1], rotation);
+        sunAzimuth = sunAzAlt[0];
+        sunAltitude = sunAzAlt[1];
         changeSunPosition(sunAzimuth, sunAltitude);
         changeCloudPosition((time*1.5 / EARTH_ROTATION_PERIOD) % 1)
-
         clearStars();
         if (sunAltitude < 0) {
           for (star of STAR_DATA) {
@@ -84,10 +88,22 @@
         }
       }
       function animate(time) {
-        renderFrame(time * (EARTH_ROTATION_PERIOD/60000));
+        renderFrame(time * (EARTH_ROTATION_PERIOD/60000) + STARTING_TIME);
         requestAnimationFrame((t) => animate(t));
       }
-      requestAnimationFrame(animate);
+      // Taken from https://en.wikipedia.org/wiki/Position_of_the_Sun
+      function getSunCoords(time) {
+        // time is number of seconds since the Unix epoch
+        n = (time-946728000)/86400 // Number of days since January 1, 2000, at 12:00 GMT
+        L = 4.89495 + 0.017202792*n;
+        g = 6.24004 + 0.017201970*n;
+        lambda = L + 0.03342*Math.sin(g)+0.00034*Math.sin(2*g);
+        eps = 23.439*Math.PI/180;
+        sunRA = Math.atan2(Math.cos(eps)*Math.sin(lambda), Math.cos(lambda));
+        sunDec = Math.asin(Math.sin(eps)*Math.sin(lambda));
+        return [sunRA, sunDec]
+      }
+
       // This function is meant to account for the difference in altitude caused by atmospheric refraction.
       // This function remains unused because the difference appears negligible in the animation.
       function refraction(altitude) {
@@ -413,6 +429,14 @@
           ctx.drawImage(star, x, y, size, size)
         }
       }
+
+      if (ANIMATION == true) {
+        requestAnimationFrame(animate);
+      }
+      else {
+        window.onload = (event) => {renderFrame(STARTING_TIME)};
+      }
+
     </script>
 	</head>
 	<body>
