@@ -23,13 +23,19 @@ def get_sun_coords(time):
   g = 6.24004 + 0.017201970*n
   k = L + 0.03342*np.sin(g) + 0.00034*np.sin(2*g)
   j = 23.439*np.pi/180
-  ra = np.atan2(np.cos(j)*np.cos(k), np.cos(k))
+  ra = np.atan2(np.cos(j)*np.sin(k), np.cos(k))
   dec = np.asin(np.sin(j)*np.sin(k))
   return (ra, dec)
 
+def get_rotation(time, longitude):
+  longitude *= np.pi/180
+  rotation = (2*np.pi * (0.7790572732640+1.00273781191135448*((time-946728000)/86400))) % (2*np.pi)
+  rotation = rotation + longitude % (2*np.pi)
+  return rotation
 '''The right ascension and declination of an object are the first two parameters.
 "Rotation" is the right ascension of the zenith, in radians'''
 def equatorial_to_az_alt(ra, dec, rotation, latitude):
+  latitude *= np.pi/180
   # Rotates about the z-axis
   rot_matrix_1 = np.array(
     [[np.cos(rotation), np.sin(rotation), 0], 
@@ -45,3 +51,6 @@ def equatorial_to_az_alt(ra, dec, rotation, latitude):
   coords = np.array(equatorial_cartesian_coordinates(ra, dec))
   coords = np.matmul(rot_matrix_1, coords.T).T
   coords = np.matmul(rot_matrix_2, coords.T).T
+  azimuth = (np.pi/2 - np.atan2(coords[1], coords[0])) % (2*np.pi)
+  altitude = np.asin(coords[2])
+  return (azimuth, -altitude)
