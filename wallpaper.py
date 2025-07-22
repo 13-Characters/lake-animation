@@ -212,3 +212,4 @@ if __name__ == "__main__":
   place_clouds(cloud_x)
   
   save_svg()
+  cairosvg.svg2png(url="./output.svg", write_to="./output.png")
