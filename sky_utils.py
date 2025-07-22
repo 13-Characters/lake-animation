@@ -53,4 +53,4 @@ def equatorial_to_az_alt(ra, dec, rotation, latitude):
   coords = np.matmul(rot_matrix_2, coords.T).T
   azimuth = (np.pi/2 - np.atan2(coords[1], coords[0])) % (2*np.pi)
   altitude = np.asin(coords[2])
-  return (azimuth, -altitude)
+  return (azimuth, altitude)
