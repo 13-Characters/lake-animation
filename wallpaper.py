@@ -293,7 +293,6 @@ def recolor_islands(sun_azimuth, sun_altitude):
                                  eastcolor1=night_colors["background"], eastcolor2=dawn_colors["background"],
                                  westcolor1=night_colors["background"], westcolor2=dusk_colors["background"],
                                  keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
-  print(color_to_hex_value(background_color))
   background_island.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
   foreground_island.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(foreground_color)};fill-opacity:1;stroke:none;")
   background_island_reflection.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
@@ -331,6 +330,31 @@ def fade_out_function(altitude):
     return 0
   if altitude < 0:
     return -((altitude/threshold - 1)**2) + 1
+
+def duck_opacity(altitude):
+  threshold = -2/27 * math.pi
+  if altitude > 0:
+    return 1
+  else:
+    return max(0, 1 - (altitude / threshold))
+
+def change_duck_opacity(altitude):
+  opacity = duck_opacity(altitude)
+  ducks = None
+  duck_reflection = None
+  reflection = get_reflection_element()
+  for node in svg_element.childNodes:
+    if isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id"):
+      if node.getAttribute("id") == "ducks":
+        ducks = node
+  for node in reflection.childNodes:
+    if isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id"):
+      if node.getAttribute("id") == "duck-reflection":
+        duck_reflection = node
+  if not all([ducks, duck_reflection]):
+    raise Exception
+  ducks.setAttribute("style", f"display:inline;fill:#16141f;fill-opacity:{opacity};stroke:none;")
+  duck_reflection.setAttribute("style", f"display:inline;opacity:{opacity};fill:#16141f;fill-opacity:1;stroke:none;")
 
 def recolor_sky(sun_azimuth, sun_altitude):
   sky_stops = svg_element.firstChild.firstChild.childNodes
@@ -431,4 +455,8 @@ def render(filename):
   cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
 
 if __name__ == "__main__":
-  render("output")
+  time = now
+  while time < now + 86400:
+    render(f".temp/{time}")
+    time += 10
+    reload()

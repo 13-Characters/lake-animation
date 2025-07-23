@@ -1,3 +1,4 @@
 *.bat
-lake.png
+output.svg
 ./venv
+.temp
