@@ -439,7 +439,7 @@ def render(filename):
       star_XY = az_alt_to_XY(*star_az_alt)
       mag = float(star["MAG"])
       scale = (5 * pow(1.5, -mag)) - (6 * (1 - fade_out_function(sun_az_alt[1])))
-      if star_XY and scale > 0:
+      if star_XY and scale > 0.4:
         place_star(star_XY[0], star_XY[1], scale)
 
   cloud_x = -((now/80000 % 1)+0.5)*7203.4177
