@@ -47,10 +47,10 @@ def color_blend(color1, color2, t):
     raise ValueError
   color1 = list(map(lambda x: x/255, color1))
   color2 = list(map(lambda x: x/255, color2))
-  color1 = list(map(lambda x: x**(2.2), color1))
-  color2 = list(map(lambda x: x**(2.2), color2))
+  # color1 = list(map(lambda x: x**(2.2), color1))
+  # color2 = list(map(lambda x: x**(2.2), color2))
   blend = [(1 - t)*a + t*b for a,b in zip(color1, color2)]
-  blend = list(map(lambda x: x**(1/2.2), blend))
+  # blend = list(map(lambda x: x**(1/2.2), blend))
   blend = list(map(lambda x: x*255, blend))
   return blend
 
@@ -92,6 +92,13 @@ def get_mountain_element():
     if isinstance(element, xml.dom.minidom.Element):
       if element.hasAttribute("id") and element.getAttribute("id") == "mountains":
         return element
+  return None
+
+def get_reflection_element():
+  for node in svg_element.childNodes:
+    if isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id") and \
+    node.getAttribute("id") == "reflection":
+      return node
   return None
 
 def get_sun_color(sun_alt):
@@ -218,6 +225,80 @@ def recolor_mountains(sun_azimuth, sun_altitude):
       if layer.getAttribute("id") == "background":
         layer.setAttribute("style", f"display:inline;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
 
+def recolor_islands(sun_azimuth, sun_altitude):
+  daytime_colors = {"background": (0x35, 0x3a, 0x65), "foreground": (0x20, 0x29, 0x3c)}
+  sunset_colors = {"background": (0x3f, 0x2a, 0x49), "foreground": (0x26, 0x20, 0x3c)}
+  sunrise_colors = {"background": (0x3f, 0x2a, 0x49), "foreground": (0x26, 0x20, 0x3c)}
+  dusk_colors = {"background": (0x16, 0x13, 0x27), "foreground": (0x0d, 0x0d, 0x1a)}
+  dawn_colors = {"background": (0x16, 0x13, 0x27), "foreground": (0x0d, 0x0d, 0x1a)}
+  night_colors = {"background": (0x0b, 0x0b, 0x0f), "foreground": (0x05, 0x05, 0x08)}
+
+  daytime_to_sunset_start = 0.20*math.pi
+  daytime_to_sunset_end = 0.08*math.pi
+  sunset_to_twilight_start = 0
+  sunset_to_twilight_end = -0.06*math.pi
+  twilight_to_night_start = -0.08*math.pi
+  twilight_to_night_end = -0.10*math.pi
+
+  background_island, foreground_island = None, None
+  background_island_reflection, foreground_island_reflection = None, None
+  for node in svg_element.childNodes:
+    if (isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id")):
+      if node.getAttribute("id") == "background-island":
+        background_island = node
+      if node.getAttribute("id") == "foreground-island":
+        foreground_island = node
+  reflection = get_reflection_element()
+  if not reflection:
+    raise Exception
+  for node in svg_element.childNodes:
+    if (isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id")):
+      if node.getAttribute("id") == "background-island":
+        background_island = node
+      if node.getAttribute("id") == "foreground-island":
+        foreground_island = node
+  for node in reflection.childNodes:
+    if (isinstance(node, xml.dom.minidom.Element) and node.hasAttribute("id")):
+      if node.getAttribute("id") == "background-island-reflection":
+        background_island_reflection = node
+      if node.getAttribute("id") == "foreground-island-reflection":
+        foreground_island_reflection = node
+  if not all([background_island, foreground_island, 
+              background_island_reflection, foreground_island_reflection]):
+    raise Exception
+  if (sun_altitude > 0):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=sunrise_colors["foreground"], eastcolor2=daytime_colors["foreground"],
+                                 westcolor1=sunset_colors["foreground"], westcolor2=daytime_colors["foreground"],
+                                 keyframe1=daytime_to_sunset_start, keyframe2=daytime_to_sunset_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=sunrise_colors["background"], eastcolor2=daytime_colors["background"],
+                                 westcolor1=sunset_colors["background"], westcolor2=daytime_colors["background"],
+                                 keyframe1=daytime_to_sunset_start, keyframe2=daytime_to_sunset_end)
+  if (-0.08*math.pi < sun_altitude <= 0):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=dawn_colors["foreground"], eastcolor2=sunrise_colors["foreground"],
+                                 westcolor1=dusk_colors["foreground"], westcolor2=sunset_colors["foreground"],
+                                 keyframe1=sunset_to_twilight_start, keyframe2=sunset_to_twilight_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=dawn_colors["background"], eastcolor2=sunrise_colors["background"],
+                                 westcolor1=dusk_colors["background"], westcolor2=sunset_colors["background"],
+                                 keyframe1=sunset_to_twilight_start, keyframe2=sunset_to_twilight_end)
+  if (sun_altitude <= -0.08*math.pi):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=night_colors["foreground"], eastcolor2=dawn_colors["foreground"],
+                                 westcolor1=night_colors["foreground"], westcolor2=dusk_colors["foreground"],
+                                 keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=night_colors["background"], eastcolor2=dawn_colors["background"],
+                                 westcolor1=night_colors["background"], westcolor2=dusk_colors["background"],
+                                 keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
+  print(color_to_hex_value(background_color))
+  background_island.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
+  foreground_island.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(foreground_color)};fill-opacity:1;stroke:none;")
+  background_island_reflection.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
+  foreground_island_reflection.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(foreground_color)};fill-opacity:1;stroke:none;")
+
 # x-axis is towards the direction the camera is facing, z-axis is up-down
 def az_alt_cartesian(azimuth, altitude):
   i = (azimuth - CAMERA_AZIMUTH) % (2*pi)
@@ -274,6 +355,12 @@ def recolor_sky(sun_azimuth, sun_altitude):
   sunset_to_twilight_end = {"top": -math.pi * 0.075, "bottom": -math.pi*0.04}
   twilight_to_night_start = {"top": -math.pi * 0.08, "bottom": -math.pi * 0.08}
   twilight_to_night_end = {"top": -math.pi * 0.09, "bottom": -math.pi * 0.12}
+  def x(word): # In order to account for the reflection being different
+    if word == "bottom":
+      return "top"
+    if word == "top":
+      return "bottom"
+    return None
   for i, part in enumerate(["top", "bottom"]):
     if (sun_altitude > 0):
       sky_color = get_color(sun_azimuth, sun_altitude, 
@@ -283,7 +370,7 @@ def recolor_sky(sun_azimuth, sun_altitude):
       reflection_color = get_color(sun_azimuth, sun_altitude, 
                             eastcolor1=sunrise_colors[part + "_reflection"], eastcolor2=daytime_colors[part + "_reflection"], 
                             westcolor1=sunset_colors[part + "_reflection"], westcolor2=daytime_colors[part + "_reflection"], 
-                            keyframe1=daytime_to_sunset_start[part], keyframe2=daytime_to_sunset_end[part])
+                            keyframe1=daytime_to_sunset_start[x(part)], keyframe2=daytime_to_sunset_end[x(part)])
     if (-0.08 * math.pi < sun_altitude <= 0):
       sky_color = get_color(sun_azimuth, sun_altitude,
                             eastcolor1=dawn_colors[part], eastcolor2=sunrise_colors[part], 
@@ -292,7 +379,7 @@ def recolor_sky(sun_azimuth, sun_altitude):
       reflection_color = get_color(sun_azimuth, sun_altitude,
                             eastcolor1=dawn_colors[part + "_reflection"], eastcolor2=sunrise_colors[part + "_reflection"], 
                             westcolor1=dusk_colors[part + "_reflection"], westcolor2=sunset_colors[part + "_reflection"], 
-                            keyframe1=sunset_to_twilight_start[part], keyframe2=sunset_to_twilight_end[part])
+                            keyframe1=sunset_to_twilight_start[x(part)], keyframe2=sunset_to_twilight_end[x(part)])
     if (sun_altitude <= -0.08 * math.pi):
       sky_color = get_color(sun_azimuth, sun_altitude, 
                             eastcolor1=night_colors[part], eastcolor2=dawn_colors[part],
@@ -301,7 +388,7 @@ def recolor_sky(sun_azimuth, sun_altitude):
       reflection_color = get_color(sun_azimuth, sun_altitude, 
                             eastcolor1=night_colors[part + "_reflection"], eastcolor2=dawn_colors[part + "_reflection"],
                             westcolor1=night_colors[part + "_reflection"], westcolor2=dusk_colors[part + "_reflection"], 
-                            keyframe1=twilight_to_night_start[part], keyframe2=twilight_to_night_end[part])
+                            keyframe1=twilight_to_night_start[x(part)], keyframe2=twilight_to_night_end[x(part)])
     sky_stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
     reflection_stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(reflection_color)};stop-opacity:1;")
 
@@ -335,6 +422,10 @@ def render(filename):
   place_clouds(cloud_x, *sun_az_alt)
 
   recolor_mountains(*sun_az_alt)
+
+  recolor_islands(*sun_az_alt)
+
+  change_duck_opacity(sun_az_alt[1])
 
   save_svg()
   cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
