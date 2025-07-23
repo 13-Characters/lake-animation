@@ -25,13 +25,66 @@ with open("sun.xml") as xml_file:
 with open("clouds.xml") as xml_file:
   clouds_xml = xml.dom.minidom.parse(xml_file)
 
-with open("input.svg") as svg_file:
-  sky_svg = xml.dom.minidom.parse(svg_file)
+with open("base.svg") as svg_file:
+  base_svg = xml.dom.minidom.parse(svg_file)
 
-svg_element = sky_svg.childNodes[1]
+svg_element = base_svg.childNodes[1]
 star_image = star_xml.firstChild
 sun = sun_xml.firstChild
 clouds = clouds_xml.firstChild
+
+def color_blend(color1, color2, t):
+  if not (0 <= t <= 1):
+    print("t is not between 0 and 1")
+    raise ValueError
+  color1 = list(map(lambda x: x/255, color1))
+  color2 = list(map(lambda x: x/255, color2))
+  color1 = list(map(lambda x: x**(2.2), color1))
+  color2 = list(map(lambda x: x**(2.2), color2))
+  blend = [(1 - t)*a + t*b for a,b in zip(color1, color2)]
+  blend = list(map(lambda x: x**(1/2.2), blend))
+  blend = list(map(lambda x: x*255, blend))
+  return blend
+
+def color_to_hex_value(color):
+  result = "#"
+  for channel in color:
+    result += f"{round(channel):02x}"
+  return result
+
+def get_color(sun_azimuth, sun_altitude,
+              eastcolor1=None, eastcolor2=None, 
+              westcolor1=None, westcolor2=None,
+              keyframe1=None, keyframe2=None):
+  if not all([x != None for x in [eastcolor1, eastcolor2, westcolor1, westcolor2, keyframe1, keyframe2]]):
+    raise ValueError
+  t_altitude = (sun_altitude - keyframe2) / (keyframe1 - keyframe2)
+  t_altitude = max(0, min(t_altitude, 1)) # Make sure this is bounded between 0 and 1
+  t_azimuth = azimuth_blend(sun_azimuth)
+  east = color_blend(eastcolor1, eastcolor2, t_altitude)
+  west = color_blend(westcolor1, westcolor2, t_altitude)
+  result = color_blend(east, west, t_azimuth)
+  return result
+
+# Used to blend between the sunrise/sunset gradients
+def azimuth_blend(azimuth):
+  threshold = math.pi / 9
+  x = abs((azimuth - math.pi/2) % (2*math.pi))
+  if (x < threshold or x > 2*math.pi - threshold):
+    return 0
+  if (abs(x - math.pi) < threshold):
+    return 1
+  if (x < math.pi):
+    return (x - threshold) / (math.pi - 2*threshold)
+  else:
+    return (2*math.pi - x - threshold) / (math.pi - 2*threshold)
+
+def get_mountain_element():
+  for element in svg_element.childNodes:
+    if isinstance(element, xml.dom.minidom.Element):
+      if element.hasAttribute("id") and element.getAttribute("id") == "mountains":
+        return element
+  return None
 
 def get_sun_color(sun_alt):
   daytime = ((255, 255, 255), (255, 255, 255))
@@ -56,25 +109,109 @@ def place_sun(x, y, sun_color, sun_glow_color):
       element.setAttribute("style", f"display:inline;opacity:1;fill:{color_to_hex_value(sun_glow_color)};fill-opacity:0.0538922;stroke:none;")
     else:
       element.setAttribute("style", f"display:inline;fill:{color_to_hex_value(sun_color)};fill-opacity:1;stroke:none;")
-  svg_element.appendChild(sun_copy)
+  svg_element.insertBefore(sun_copy, get_mountain_element())
 
 def place_star(x, y, scale):
   star_copy = star_image.cloneNode(True)
   star_copy.setAttribute("transform", f"translate({x} {y}) scale({scale})")
-  svg_element.appendChild(star_copy)
+  svg_element.insertBefore(star_copy, get_mountain_element())
 
-def place_clouds(x):
+def place_clouds(x, sun_azimuth, sun_altitude):
+  daytime_color = (0xe6, 0xf8, 0xff)
+  sunset_color = (0xe5, 0x8b, 0x3d)
+  sunrise_color = (0xe5, 0x8b, 0x3d)
+  dusk_color = (0x9a, 0x5c, 0x5c)
+  dawn_color = (0x35, 0x36, 0x53)
+  night_color = (0x1f, 0x0d, 0x1f)
+
+  daytime_to_sunset_start = math.pi*0.22
+  daytime_to_sunset_end = math.pi*0.08
+  sunset_to_twilight_start = 0
+  sunset_to_twilight_end = -math.pi*0.06
+  twilight_to_night_start = -math.pi*0.08
+  twilight_to_night_end = -math.pi*0.10
   clouds_copy = clouds.cloneNode(True)
   elements = [element for element in clouds_copy.childNodes if type(element) == xml.dom.minidom.Element]
   pattern = elements[0]
   rect = elements[1]
   svg_element.appendChild(pattern)
   rect.setAttribute("transform", f"translate({x} 667) scale(3.77913)")
-  svg_element.appendChild(rect)
+  if (sun_altitude > 0):
+    cloud_color = get_color(sun_azimuth=sun_azimuth, sun_altitude=sun_altitude,
+                            eastcolor1=sunrise_color, eastcolor2=daytime_color,
+                            westcolor1=sunset_color, westcolor2=daytime_color,
+                            keyframe1=daytime_to_sunset_start, keyframe2=daytime_to_sunset_end)
+  if (-0.08*math.pi < sun_altitude <= 0):
+    cloud_color = get_color(sun_azimuth=sun_azimuth, sun_altitude=sun_altitude,
+                            eastcolor1=dawn_color, eastcolor2=sunrise_color,
+                            westcolor1=dusk_color, westcolor2=sunset_color,
+                            keyframe1=sunset_to_twilight_start, keyframe2=sunset_to_twilight_end)
+  if (sun_altitude <= -0.08*math.pi):
+    cloud_color = get_color(sun_azimuth=sun_azimuth, sun_altitude=sun_altitude,
+                            eastcolor1=night_color, eastcolor2=dawn_color,
+                            westcolor1=night_color, westcolor2=dusk_color,
+                            keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
+  for element in pattern.childNodes[3].childNodes[1].childNodes:
+    if element.nodeName == "path":
+      element.setAttribute("style", f"display:inline;fill:{color_to_hex_value(cloud_color)};fill-opacity:1;stroke:none;")
+  svg_element.insertBefore(rect, get_mountain_element())
 
-def save_svg():
-  with open("output.svg", "w") as output:
-    svg_element.writexml(output, indent="\t", newl="\n")
+def recolor_mountains(sun_azimuth, sun_altitude):
+  daytime_colors = {"foreground": (0x66, 0x76, 0xa9), "background": (0x41, 0x48, 0x75)}
+  sunset_colors = {"foreground": (0x8e, 0x42, 0x44), "background": (0x58, 0x2e, 0x46)}
+  sunrise_colors = {"foreground": (0x99, 0x4d, 0x60), "background": (0x5f, 0x2f, 0x51)}
+  dusk_colors = {"foreground": (0x4d, 0x13, 0x44), "background": (0x30, 0x11, 0x31)}
+  dawn_colors = {"foreground": (0x27, 0x1d, 0x47), "background": (0x13, 0x13, 0x2d)}
+  night_colors = {"foreground": (0x1b, 0x07, 0x1b), "background": (0x11, 0x0b, 0x16)}
+
+  daytime_to_sunset_start = 0.20*math.pi
+  daytime_to_sunset_end = 0.08*math.pi
+  sunset_to_twilight_start = 0
+  sunset_to_twilight_end = -0.06*math.pi
+  twilight_to_night_start = -0.08*math.pi
+  twilight_to_night_end = -0.10*math.pi
+
+  if (sun_altitude > 0):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=sunrise_colors["foreground"], eastcolor2=daytime_colors["foreground"],
+                                 westcolor1=sunset_colors["foreground"], westcolor2=daytime_colors["foreground"],
+                                 keyframe1=daytime_to_sunset_start, keyframe2=daytime_to_sunset_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=sunrise_colors["background"], eastcolor2=daytime_colors["background"],
+                                 westcolor1=sunset_colors["background"], westcolor2=daytime_colors["background"],
+                                 keyframe1=daytime_to_sunset_start, keyframe2=daytime_to_sunset_end)
+  if (-0.08*math.pi < sun_altitude <= 0):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=dawn_colors["foreground"], eastcolor2=sunrise_colors["foreground"],
+                                 westcolor1=dusk_colors["foreground"], westcolor2=sunset_colors["foreground"],
+                                 keyframe1=sunset_to_twilight_start, keyframe2=sunset_to_twilight_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=dawn_colors["background"], eastcolor2=sunrise_colors["background"],
+                                 westcolor1=dusk_colors["background"], westcolor2=sunset_colors["background"],
+                                 keyframe1=sunset_to_twilight_start, keyframe2=sunset_to_twilight_end)
+  if (sun_altitude <= -0.08*math.pi):
+    foreground_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=night_colors["foreground"], eastcolor2=dawn_colors["foreground"],
+                                 westcolor1=night_colors["foreground"], westcolor2=dusk_colors["foreground"],
+                                 keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
+    background_color = get_color(sun_azimuth, sun_altitude,
+                                 eastcolor1=night_colors["background"], eastcolor2=dawn_colors["background"],
+                                 westcolor1=night_colors["background"], westcolor2=dusk_colors["background"],
+                                 keyframe1=twilight_to_night_start, keyframe2=twilight_to_night_end)
+  
+  mountains = get_mountain_element()
+  midground_color = color_blend(foreground_color, background_color, 0.5)
+  print(foreground_color)
+  print(midground_color)
+  print(background_color)
+  for layer in mountains.childNodes:
+    if layer.hasAttribute("id"):
+      if layer.getAttribute("id") == "foreground":
+        layer.setAttribute("style", f"display:inline;fill:{color_to_hex_value(foreground_color)};fill-opacity:1;stroke:none;")
+      if layer.getAttribute("id") == "midground":
+        layer.setAttribute("style", f"display:inline;fill:{color_to_hex_value(midground_color)};fill-opacity:1;stroke:none;")
+      if layer.getAttribute("id") == "background":
+        layer.setAttribute("style", f"display:inline;fill:{color_to_hex_value(background_color)};fill-opacity:1;stroke:none;")
 
 # x-axis is towards the direction the camera is facing, z-axis is up-down
 def az_alt_cartesian(azimuth, altitude):
@@ -108,47 +245,16 @@ def fade_out_function(altitude):
     return 0
   if altitude < 0:
     return -((altitude/threshold - 1)**2) + 1
-  
-def color_blend(color1, color2, t):
-  if not (0 <= t <= 1):
-    print("t is not between 0 and 1")
-    raise ValueError
-  color1 = list(map(lambda x: x/255, color1))
-  color2 = list(map(lambda x: x/255, color2))
-  color1 = list(map(lambda x: x**(2.2), color1))
-  color2 = list(map(lambda x: x**(2.2), color2))
-  blend = [(1 - t)*a + t*b for a,b in zip(color1, color2)]
-  blend = list(map(lambda x: x**(1/2.2), blend))
-  blend = list(map(lambda x: x*255, blend))
-  return blend
-
-def color_to_hex_value(color):
-  result = "#"
-  for channel in color:
-    result += f"{round(channel):02x}"
-  return result
-
-# Used to blend between the sunrise/sunset gradients
-def azimuth_blend(azimuth):
-  threshold = math.pi / 9
-  x = abs((azimuth - math.pi/2) % (2*math.pi))
-  if (x < threshold or x > 2*math.pi - threshold):
-    return 0
-  if (abs(x - math.pi) < threshold):
-    return 1
-  if (x < math.pi):
-    return (x - threshold) / (math.pi - 2*threshold)
-  else:
-    return (2*math.pi - x - threshold) / (math.pi - 2*threshold)
 
 def update_sky_colors(sun_azimuth, sun_altitude):
+  stops = svg_element.firstChild.firstChild.childNodes
+
   daytime_colors = {"top": (0x4c, 0x7c, 0xd2), "bottom": (0xad, 0xc9, 0xf1)}
   sunset_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xe1, 0x6c, 0x37)}
   sunrise_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xc6, 0x62, 0x91)}
   dusk_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x7f, 0x19, 0x4c)}
   dawn_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x37, 0x28, 0x58)}
   night_colors = {"top": (0x13, 0x0d, 0x19), "bottom": (0x2b, 0x15, 0x2f)}
-  stops = svg_element.firstChild.firstChild.childNodes
   # Altitudes for when the transition between daytime and sunset colors begin and end
   daytime_to_sunset_start = {"top": math.pi*0.16, "bottom": math.pi*0.25} # Seems more natural if bottom changes before top
   daytime_to_sunset_end = {"top": math.pi * 0.08, "bottom": math.pi * 0.08}
@@ -158,32 +264,29 @@ def update_sky_colors(sun_azimuth, sun_altitude):
   twilight_to_night_end = {"top": -math.pi * 0.09, "bottom": -math.pi * 0.12}
   if (sun_altitude > 0):
     for i, part in enumerate(["top", "bottom"]):
-      t_altitude = (sun_altitude - daytime_to_sunset_end[part]) / (daytime_to_sunset_start[part] - daytime_to_sunset_end[part])
-      t_altitude = max(0, min(t_altitude, 1)) # Make sure this is bounded between 0 and 1
-      t_azimuth = azimuth_blend(sun_azimuth)
-      # If only there were a general term for sunrise and sunset
-      lowsun = color_blend(sunrise_colors[part], sunset_colors[part], t_azimuth)
-      sky_color = color_blend(lowsun, daytime_colors[part], t_altitude)
+      sky_color = get_color(sun_azimuth, sun_altitude, 
+                            eastcolor1=sunrise_colors[part], eastcolor2=daytime_colors[part], 
+                            westcolor1=sunset_colors[part], westcolor2=daytime_colors[part], 
+                            keyframe1=daytime_to_sunset_start[part], keyframe2=daytime_to_sunset_end[part])
       stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
   if (-0.08 * math.pi < sun_altitude <= 0):
     for i, part in enumerate(["top", "bottom"]):
-      t_altitude = (sun_altitude - sunset_to_twilight_end[part]) / (sunset_to_twilight_start[part] - sunset_to_twilight_end[part])
-      t_altitude = max(0, min(t_altitude, 1)) # Make sure this is bounded between 0 and 1
-      t_azimuth = azimuth_blend(sun_azimuth)
-      # If only there were a general term for sunrise and sunset
-      lowsun = color_blend(sunrise_colors[part], sunset_colors[part], t_azimuth)
-      twilight = color_blend(dawn_colors[part], dusk_colors[part], t_azimuth)
-      sky_color = color_blend(twilight, lowsun, t_altitude)
+      sky_color = get_color(sun_azimuth, sun_altitude,
+                            eastcolor1=dawn_colors[part], eastcolor2=sunrise_colors[part], 
+                            westcolor1=dusk_colors[part], westcolor2=sunset_colors[part], 
+                            keyframe1=sunset_to_twilight_start[part], keyframe2=sunset_to_twilight_end[part])
       stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
   if (sun_altitude <= -0.08 * math.pi):
     for i, part in enumerate(["top", "bottom"]):
-      t_altitude = (sun_altitude - twilight_to_night_end[part]) / (twilight_to_night_start[part] - twilight_to_night_end[part])
-      t_altitude = max(0, min(t_altitude, 1)) # Make sure this is bounded between 0 and 1
-      t_azimuth = azimuth_blend(sun_azimuth)
-      # If only there were a general term for sunrise and sunset
-      twilight = color_blend(dawn_colors[part], dusk_colors[part], t_azimuth)
-      sky_color = color_blend(night_colors[part], twilight, t_altitude)
+      sky_color = get_color(sun_azimuth, sun_altitude, 
+                            eastcolor1=night_colors[part], eastcolor2=dawn_colors[part],
+                            westcolor1=night_colors[part], westcolor2=dusk_colors[part], 
+                            keyframe1=twilight_to_night_start[part], keyframe2=twilight_to_night_end[part])
       stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
+
+def save_svg():
+  with open("output.svg", "w") as output:
+    svg_element.writexml(output, indent="\t", newl="\n")
 
 
 if __name__ == "__main__":
@@ -209,7 +312,9 @@ if __name__ == "__main__":
         place_star(star_XY[0], star_XY[1], scale)
 
   cloud_x = -((now/80000 % 1)+0.5)*7203.4177
-  place_clouds(cloud_x)
-  
+  place_clouds(cloud_x, *sun_az_alt)
+
+  recolor_mountains(*sun_az_alt)
+
   save_svg()
   cairosvg.svg2png(url="./output.svg", write_to="./output.png")
