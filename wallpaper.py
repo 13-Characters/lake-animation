@@ -251,15 +251,22 @@ def fade_out_function(altitude):
   if altitude < 0:
     return -((altitude/threshold - 1)**2) + 1
 
-def update_sky_colors(sun_azimuth, sun_altitude):
-  stops = svg_element.firstChild.firstChild.childNodes
+def recolor_sky(sun_azimuth, sun_altitude):
+  sky_stops = svg_element.firstChild.firstChild.childNodes
+  reflection_stops = svg_element.firstChild.childNodes[3].childNodes
 
-  daytime_colors = {"top": (0x4c, 0x7c, 0xd2), "bottom": (0xad, 0xc9, 0xf1)}
-  sunset_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xe1, 0x6c, 0x37)}
-  sunrise_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xc6, 0x62, 0x91)}
-  dusk_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x7f, 0x19, 0x4c)}
-  dawn_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x37, 0x28, 0x58)}
-  night_colors = {"top": (0x13, 0x0d, 0x19), "bottom": (0x2b, 0x15, 0x2f)}
+  daytime_colors = {"top": (0x4c, 0x7c, 0xd2), "bottom": (0xad, 0xc9, 0xf1),
+                    "top_reflection": (0x8d, 0x9f, 0xc2), "bottom_reflection": (0x5a, 0x75, 0xb2)}
+  sunset_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xe1, 0x6c, 0x37),
+                   "top_reflection": (0xbb, 0x6a, 0x5d), "bottom_reflection": (0x5c, 0x48, 0x6d)}
+  sunrise_colors = {"top": (0x31, 0x33, 0x59), "bottom": (0xc6, 0x62, 0x91),
+                    "top_reflection":(0xc3, 0x66, 0x85), "bottom_reflection": (0x5c, 0x48, 0x6d)}
+  dusk_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x7f, 0x19, 0x4c),
+                 "top_reflection": (0x61, 0x32, 0x46), "bottom_reflection": (0x21, 0x1a, 0x25)}
+  dawn_colors = {"top": (0x20, 0x0b, 0x34), "bottom": (0x37, 0x28, 0x58),
+                 "top_reflection": (0x35, 0x2c, 0x54), "bottom_reflection": (0x21, 0x1a, 0x25)}
+  night_colors = {"top": (0x13, 0x0d, 0x19), "bottom": (0x2b, 0x15, 0x2f),
+                  "top_reflection":(0x2b, 0x14, 0x2b), "bottom_reflection": (0x08, 0x06, 0x08)}
   # Altitudes for when the transition between daytime and sunset colors begin and end
   daytime_to_sunset_start = {"top": math.pi*0.16, "bottom": math.pi*0.25} # Seems more natural if bottom changes before top
   daytime_to_sunset_end = {"top": math.pi * 0.08, "bottom": math.pi * 0.08}
@@ -267,33 +274,42 @@ def update_sky_colors(sun_azimuth, sun_altitude):
   sunset_to_twilight_end = {"top": -math.pi * 0.075, "bottom": -math.pi*0.04}
   twilight_to_night_start = {"top": -math.pi * 0.08, "bottom": -math.pi * 0.08}
   twilight_to_night_end = {"top": -math.pi * 0.09, "bottom": -math.pi * 0.12}
-  if (sun_altitude > 0):
-    for i, part in enumerate(["top", "bottom"]):
+  for i, part in enumerate(["top", "bottom"]):
+    if (sun_altitude > 0):
       sky_color = get_color(sun_azimuth, sun_altitude, 
                             eastcolor1=sunrise_colors[part], eastcolor2=daytime_colors[part], 
                             westcolor1=sunset_colors[part], westcolor2=daytime_colors[part], 
                             keyframe1=daytime_to_sunset_start[part], keyframe2=daytime_to_sunset_end[part])
-      stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
-  if (-0.08 * math.pi < sun_altitude <= 0):
-    for i, part in enumerate(["top", "bottom"]):
+      reflection_color = get_color(sun_azimuth, sun_altitude, 
+                            eastcolor1=sunrise_colors[part + "_reflection"], eastcolor2=daytime_colors[part + "_reflection"], 
+                            westcolor1=sunset_colors[part + "_reflection"], westcolor2=daytime_colors[part + "_reflection"], 
+                            keyframe1=daytime_to_sunset_start[part], keyframe2=daytime_to_sunset_end[part])
+    if (-0.08 * math.pi < sun_altitude <= 0):
       sky_color = get_color(sun_azimuth, sun_altitude,
                             eastcolor1=dawn_colors[part], eastcolor2=sunrise_colors[part], 
                             westcolor1=dusk_colors[part], westcolor2=sunset_colors[part], 
                             keyframe1=sunset_to_twilight_start[part], keyframe2=sunset_to_twilight_end[part])
-      stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
-  if (sun_altitude <= -0.08 * math.pi):
-    for i, part in enumerate(["top", "bottom"]):
+      reflection_color = get_color(sun_azimuth, sun_altitude,
+                            eastcolor1=dawn_colors[part + "_reflection"], eastcolor2=sunrise_colors[part + "_reflection"], 
+                            westcolor1=dusk_colors[part + "_reflection"], westcolor2=sunset_colors[part + "_reflection"], 
+                            keyframe1=sunset_to_twilight_start[part], keyframe2=sunset_to_twilight_end[part])
+    if (sun_altitude <= -0.08 * math.pi):
       sky_color = get_color(sun_azimuth, sun_altitude, 
                             eastcolor1=night_colors[part], eastcolor2=dawn_colors[part],
                             westcolor1=night_colors[part], westcolor2=dusk_colors[part], 
                             keyframe1=twilight_to_night_start[part], keyframe2=twilight_to_night_end[part])
-      stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
+      reflection_color = get_color(sun_azimuth, sun_altitude, 
+                            eastcolor1=night_colors[part + "_reflection"], eastcolor2=dawn_colors[part + "_reflection"],
+                            westcolor1=night_colors[part + "_reflection"], westcolor2=dusk_colors[part + "_reflection"], 
+                            keyframe1=twilight_to_night_start[part], keyframe2=twilight_to_night_end[part])
+    sky_stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(sky_color)};stop-opacity:1;")
+    reflection_stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(reflection_color)};stop-opacity:1;")
 
 def save_svg():
   with open("output.svg", "w") as output:
     svg_element.writexml(output, indent="\t", newl="\n")
 
-def main(filename):
+def render(filename):
   LATITUDE = float(sys.argv[1])
   LONGITUDE = float(sys.argv[2])
   rotation = sky_utils.get_rotation(now, LONGITUDE)
@@ -303,7 +319,7 @@ def main(filename):
   sun_colors = get_sun_color(sun_az_alt[1])
   if sun_XY:
     place_sun(*sun_XY, *sun_colors)
-  update_sky_colors(*sun_az_alt)
+  recolor_sky(*sun_az_alt)
   
   if sun_az_alt[1] < 0:
     star_data = json.load(open("star_data.json"))
@@ -311,7 +327,7 @@ def main(filename):
       star_az_alt = sky_utils.equatorial_to_az_alt(float(star["RA"]), float(star["DEC"]), rotation, LATITUDE)
       star_XY = az_alt_to_XY(*star_az_alt)
       mag = float(star["MAG"])
-      scale = (5/49*(mag-7)**2) - (6 * (1 - fade_out_function(sun_az_alt[1])))
+      scale = (5 * pow(1.5, -mag)) - (6 * (1 - fade_out_function(sun_az_alt[1])))
       if star_XY and scale > 0:
         place_star(star_XY[0], star_XY[1], scale)
 
@@ -324,8 +340,4 @@ def main(filename):
   cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
 
 if __name__ == "__main__":
-  end_time = now + 86400
-  while (now < end_time):
-    main(f"test/{int(now)}")
-    reload()
-    now += 10
+  render("output")
