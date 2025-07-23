@@ -455,8 +455,8 @@ def render(filename):
   cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
 
 if __name__ == "__main__":
-  time = now
-  while time < now + 86400:
-    render(f".temp/{time}")
-    time += 10
+  start = now
+  while now < start + 86400:
+    render(f".temp/{now}")
+    now += 10
     reload()
