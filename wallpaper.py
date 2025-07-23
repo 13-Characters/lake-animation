@@ -33,6 +33,14 @@ star_image = star_xml.firstChild
 sun = sun_xml.firstChild
 clouds = clouds_xml.firstChild
 
+def reload():
+  global svg_element
+  global base_svg
+  with open("base.svg") as svg_file:
+    base_svg = xml.dom.minidom.parse(svg_file)
+  svg_element = base_svg.childNodes[1]
+
+
 def color_blend(color1, color2, t):
   if not (0 <= t <= 1):
     print("t is not between 0 and 1")
@@ -201,9 +209,6 @@ def recolor_mountains(sun_azimuth, sun_altitude):
   
   mountains = get_mountain_element()
   midground_color = color_blend(foreground_color, background_color, 0.5)
-  print(foreground_color)
-  print(midground_color)
-  print(background_color)
   for layer in mountains.childNodes:
     if layer.hasAttribute("id"):
       if layer.getAttribute("id") == "foreground":
@@ -288,8 +293,7 @@ def save_svg():
   with open("output.svg", "w") as output:
     svg_element.writexml(output, indent="\t", newl="\n")
 
-
-if __name__ == "__main__":
+def main(filename):
   LATITUDE = float(sys.argv[1])
   LONGITUDE = float(sys.argv[2])
   rotation = sky_utils.get_rotation(now, LONGITUDE)
@@ -307,7 +311,7 @@ if __name__ == "__main__":
       star_az_alt = sky_utils.equatorial_to_az_alt(float(star["RA"]), float(star["DEC"]), rotation, LATITUDE)
       star_XY = az_alt_to_XY(*star_az_alt)
       mag = float(star["MAG"])
-      scale = (5 * pow(1.5, -mag)) - (6 * (1 - fade_out_function(sun_az_alt[1])))
+      scale = (5/49*(mag-7)**2) - (6 * (1 - fade_out_function(sun_az_alt[1])))
       if star_XY and scale > 0:
         place_star(star_XY[0], star_XY[1], scale)
 
@@ -317,4 +321,11 @@ if __name__ == "__main__":
   recolor_mountains(*sun_az_alt)
 
   save_svg()
-  cairosvg.svg2png(url="./output.svg", write_to="./output.png")
+  cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
+
+if __name__ == "__main__":
+  end_time = now + 86400
+  while (now < end_time):
+    main(f"test/{int(now)}")
+    reload()
+    now += 10
