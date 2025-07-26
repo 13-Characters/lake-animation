@@ -14,7 +14,7 @@ HORIZONTAL_FOV = math.pi / 3
 CAMERA_AZIMUTH = math.pi * 1.45
 EARTH_ROTATION_PERIOD = 86164.098904
 
-now = math.floor(datetime.now().timestamp()) if len(sys.argv) <= 3 else float(sys.argv[3])
+now = math.floor(datetime.now().timestamp())
 
 with open("star.xml") as xml_file:
     star_xml = xml.dom.minidom.parse(xml_file)
@@ -420,18 +420,17 @@ def save_svg():
   with open("output.svg", "w") as output:
     svg_element.writexml(output, indent="\t", newl="\n")
 
-def render(filename):
-  LATITUDE = float(sys.argv[1])
-  LONGITUDE = float(sys.argv[2])
-  rotation = sky_utils.get_rotation(now, LONGITUDE)
-  sun_pos = sky_utils.get_sun_coords(now)
+def render(filename, LATITUDE, LONGITUDE, time):
+  rotation = sky_utils.get_rotation(time, LONGITUDE)
+
+  sun_pos = sky_utils.get_sun_coords(time)
   sun_az_alt = sky_utils.equatorial_to_az_alt(*sun_pos, rotation, LATITUDE)
   sun_XY = az_alt_to_XY(*sun_az_alt)
   sun_colors = get_sun_color(sun_az_alt[1])
   if sun_XY:
     place_sun(*sun_XY, *sun_colors)
   recolor_sky(*sun_az_alt)
-  
+
   if sun_az_alt[1] < 0:
     star_data = json.load(open("star_data.json"))
     for star in star_data:
@@ -442,7 +441,7 @@ def render(filename):
       if star_XY and scale > 0.4:
         place_star(star_XY[0], star_XY[1], scale)
 
-  cloud_x = -((now/80000 % 1)+0.5)*7203.4177
+  cloud_x = -((time/80000 % 1)+0.5)*7203.4177
   place_clouds(cloud_x, *sun_az_alt)
 
   recolor_mountains(*sun_az_alt)
@@ -455,8 +454,8 @@ def render(filename):
   cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
 
 if __name__ == "__main__":
-  start = now
-  while now < start + 86400:
-    render(f".temp/{now}")
-    now += 10
-    reload()
+  LATITUDE = float(sys.argv[1])
+  LONGITUDE = float(sys.argv[2])
+  if len(sys.argv) > 3:
+     now = float(sys.argv[3])
+  render("lake", LATITUDE, LONGITUDE, now)
