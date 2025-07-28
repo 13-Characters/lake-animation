@@ -6,6 +6,8 @@ import json
 import xml.dom.minidom
 from math import pow, pi, sin, cos, tan
 import cairosvg
+import io
+from time import process_time
 
 HORIZON_Y = 1420
 IMAGE_WIDTH = 3840
@@ -419,12 +421,12 @@ def recolor_sky(sun_azimuth, sun_altitude):
     reflection_stops[i].setAttribute("style", f"stop-color:{color_to_hex_value(reflection_color)};stop-opacity:1;")
 
 def save_svg():
-  with open("output.svg", "w") as output:
-    svg_element.writexml(output, indent="\t", newl="\n")
+  output = io.StringIO()
+  svg_element.writexml(output, indent="\t", newl="\n")
+  return output
 
-def render(filename, LATITUDE, LONGITUDE, time):
+def render(LATITUDE, LONGITUDE, time):
   rotation = sky_utils.get_rotation(time, LONGITUDE)
-
   sun_pos = sky_utils.get_sun_coords(time)
   sun_az_alt = sky_utils.equatorial_to_az_alt(*sun_pos, rotation, LATITUDE)
   sun_XY = az_alt_to_XY(*sun_az_alt)
@@ -446,17 +448,17 @@ def render(filename, LATITUDE, LONGITUDE, time):
   place_clouds(cloud_x, *sun_az_alt)
 
   recolor_mountains(*sun_az_alt)
-
   recolor_islands(*sun_az_alt)
 
   change_duck_opacity(sun_az_alt[1])
 
-  save_svg()
-  cairosvg.svg2png(url="./output.svg", write_to=f"./{filename}.png")
+  return save_svg()
 
 if __name__ == "__main__":
   LATITUDE = float(sys.argv[1])
   LONGITUDE = float(sys.argv[2])
   if len(sys.argv) > 3:
      now = float(sys.argv[3])
-  render("lake", LATITUDE, LONGITUDE, now)
+  svg = render(LATITUDE, LONGITUDE, now)
+  with open("lake.svg", "w") as w:
+    w.write(svg)
