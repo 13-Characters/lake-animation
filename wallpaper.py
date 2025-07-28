@@ -27,6 +27,8 @@ with open("clouds.xml") as xml_file:
 
 with open("base.svg") as svg_file:
   base_svg = xml.dom.minidom.parse(svg_file)
+  
+star_data = json.load(open("star_data.json"))
 
 svg_element = base_svg.childNodes[1]
 star_image = star_xml.firstChild
@@ -432,7 +434,6 @@ def render(filename, LATITUDE, LONGITUDE, time):
   recolor_sky(*sun_az_alt)
 
   if sun_az_alt[1] < 0:
-    star_data = json.load(open("star_data.json"))
     for star in star_data:
       star_az_alt = sky_utils.equatorial_to_az_alt(float(star["RA"]), float(star["DEC"]), rotation, LATITUDE)
       star_XY = az_alt_to_XY(*star_az_alt)
