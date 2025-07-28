@@ -5,9 +5,7 @@ import sky_utils
 import json
 import xml.dom.minidom
 from math import pow, pi, sin, cos, tan
-import cairosvg
 import io
-from time import process_time
 
 HORIZON_Y = 1420
 IMAGE_WIDTH = 3840
