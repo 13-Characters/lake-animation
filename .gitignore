@@ -1,4 +1,3 @@
 *.bat
 output.svg
 ./venv
-.temp
