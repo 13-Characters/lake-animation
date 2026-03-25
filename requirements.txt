@@ -1,2 +1,0 @@
-numpy==2.3.1
-cairosvg==2.8.2
