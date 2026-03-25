@@ -7,7 +7,7 @@ The wallpaper is based off a wallpaper on r/wallpapers made by u/Tomu_Ozawa, whi
 ![Demo](./test.mp4)
 
 ## Usage:
-The instructions for which 
+The instructions on how to set up the wallpaper differ depending on which operating system you use. Instructions for Linux can be found below.
 The script `wallpaper.py` generates an SVG file based on the current time (if time is not provided) and user-provided location to `lake.svg`.
 To generate an SVG file, run the command
 ```
