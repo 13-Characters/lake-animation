@@ -8,7 +8,7 @@ from math import pow, pi, sin, cos, tan
 import io
 
 
-HORIZON_Y = 1420
+HORIZON_Y = 1120
 IMAGE_WIDTH = 3840
 IMAGE_HEIGHT = 2560
 HORIZONTAL_FOV = math.pi / 3
