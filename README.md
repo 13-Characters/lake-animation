@@ -4,7 +4,7 @@ Generates a wallpaper of a lake based on the current time and user-provided loca
 The wallpaper is based off a wallpaper on r/wallpapers made by u/Tomu_Ozawa, which was based off of [this Reddit post](https://www.reddit.com/r/EarthPorn/comments/3ihsre/my_favourite_shot_from_yellowstone_taken_at_bay/).
 
 ## Demo:
-![Demo](./demo.mp4)
+https://github.com/user-attachments/assets/271a4b0f-3fc9-4692-bbc0-8e4a79c24a77
 
 ## Usage:
 The instructions on how to set up the wallpaper differ depending on which operating system you use. Instructions for Linux can be found below.
